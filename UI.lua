@@ -1,0 +1,821 @@
+local REA = AntiInspector
+
+REA.GEAR_COLUMNS_PER_PAGE = 5
+REA.ROW_HEIGHT = 25
+
+local CELL_COLORS = {
+    enchanted = { 0.25, 1.00, 0.35 },
+    missing = { 1.00, 0.25, 0.20 },
+    none = { 0.55, 0.55, 0.55 },
+    empty = { 0.70, 0.35, 0.35 },
+    unknown = { 1.00, 0.75, 0.20 },
+    unavailable = { 0.45, 0.45, 0.45 },
+}
+
+local GEM_CELL_COLORS = {
+    socketed = { 0.25, 1.00, 0.35 },
+    partial = { 1.00, 0.72, 0.20 },
+    missing = { 1.00, 0.25, 0.20 },
+    none = { 0.55, 0.55, 0.55 },
+    empty = { 0.70, 0.35, 0.35 },
+    unknown = { 1.00, 0.75, 0.20 },
+    unavailable = { 0.45, 0.45, 0.45 },
+}
+
+local STATUS_COLORS = {
+    ok = { 0.25, 1.00, 0.35 },
+    partial = { 1.00, 0.75, 0.20 },
+    far = { 0.65, 0.65, 0.65 },
+    offline = { 0.55, 0.55, 0.55 },
+    timeout = { 1.00, 0.35, 0.25 },
+    failed = { 1.00, 0.35, 0.25 },
+    changed = { 1.00, 0.60, 0.20 },
+}
+
+local function MakeText(parent, font, justify)
+    local text = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
+    text:SetJustifyH(justify or "LEFT")
+    text:SetJustifyV("MIDDLE")
+    return text
+end
+
+local function MakeButton(parent, label, width, height)
+    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    button:SetWidth(width)
+    button:SetHeight(height)
+    button:SetText(label)
+    return button
+end
+
+local function SetCellText(cell, text, color)
+    cell.text:SetText(text or "—")
+    if color then
+        cell.text:SetTextColor(color[1], color[2], color[3])
+    else
+        cell.text:SetTextColor(0.85, 0.85, 0.85)
+    end
+end
+
+function REA:GetVisibleSlots()
+    if self.activeTab == "gems" then
+        return self.GemSlots
+    end
+    return self.Slots
+end
+
+function REA:SetActiveTab(tabName)
+    if tabName ~= "gems" then
+        tabName = "enchants"
+    end
+    self.activeTab = tabName
+    self.gearPage = 1
+
+    if self.EnchantTabButton and self.GemTabButton then
+        if tabName == "gems" then
+            self.EnchantTabButton:Enable()
+            self.GemTabButton:Disable()
+        else
+            self.EnchantTabButton:Disable()
+            self.GemTabButton:Enable()
+        end
+    end
+
+    if self.LegendText then
+        if tabName == "gems" then
+            self.LegendText:SetText("|cff40ff59Камни установлены|r   |cffff4033ПУСТОЙ СОКЕТ|r   |cffffb733частично заполнено|r   |cff8c8c8c— сокетов нет|r")
+        else
+            self.LegendText:SetText("|cff40ff59Чары найдены|r   |cffff4033НЕТ ЧАР|r — слот обычно требует чар   |cff8c8c8c— слот обычно не чарится|r")
+        end
+    end
+
+    if self.RefreshUI then
+        self:RefreshUI()
+    end
+end
+
+function REA:CreateRow(index)
+    local row = CreateFrame("Frame", nil, self.TableChild)
+    row:SetHeight(self.ROW_HEIGHT)
+    row:SetPoint("TOPLEFT", self.TableChild, "TOPLEFT", 0, -((index - 1) * self.ROW_HEIGHT))
+    row:SetPoint("RIGHT", self.TableChild, "RIGHT", 0, 0)
+
+    row.background = row:CreateTexture(nil, "BACKGROUND")
+    row.background:SetAllPoints(row)
+    if index % 2 == 0 then
+        row.background:SetTexture(1, 1, 1, 0.035)
+    else
+        row.background:SetTexture(0, 0, 0, 0.10)
+    end
+
+    row.nameButton = CreateFrame("Button", nil, row)
+    row.nameButton:SetWidth(116)
+    row.nameButton:SetHeight(self.ROW_HEIGHT - 1)
+    row.nameButton:SetPoint("LEFT", row, "LEFT", 4, 0)
+    row.nameButton:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+    row.name = MakeText(row.nameButton)
+    row.name:SetAllPoints(row.nameButton)
+    row.nameButton:SetScript("OnClick", function(button)
+        if button.resultData then
+            REA:RetryResult(button.resultData)
+        end
+    end)
+    row.nameButton:SetScript("OnEnter", function(button)
+        if button.resultData then
+            GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
+            GameTooltip:SetText(button.resultData.name or "?", 1, 0.82, 0)
+            if button.resultData.status == "ok" then
+                GameTooltip:AddLine("Статус: " .. (button.resultData.statusText or "Готово"), 0.35, 1, 0.35)
+            else
+                GameTooltip:AddLine("Статус: " .. (button.resultData.statusText or "Нет данных"), 1, 0.45, 0.25)
+            end
+            GameTooltip:AddLine("Нажмите, чтобы проверить этого персонажа ещё раз.", 0.35, 1, 0.35, true)
+            GameTooltip:Show()
+        end
+    end)
+    row.nameButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    row.class = MakeText(row)
+    row.class:SetPoint("LEFT", row, "LEFT", 126, 0)
+    row.class:SetWidth(78)
+
+    row.build = MakeText(row)
+    row.build:SetPoint("LEFT", row, "LEFT", 210, 0)
+    row.build:SetWidth(146)
+
+    row.status = MakeText(row)
+    row.status:SetPoint("LEFT", row, "LEFT", 362, 0)
+    row.status:SetWidth(94)
+
+    row.gearCells = {}
+    local column
+    for column = 1, self.GEAR_COLUMNS_PER_PAGE do
+        local cell = CreateFrame("Button", nil, row)
+        cell:SetWidth(116)
+        cell:SetHeight(self.ROW_HEIGHT - 1)
+        cell:SetPoint("LEFT", row, "LEFT", 462 + ((column - 1) * 120), 0)
+        cell.text = MakeText(cell, "GameFontHighlightSmall", "CENTER")
+        cell.text:SetAllPoints(cell)
+        cell:SetScript("OnEnter", function(button)
+            if not button.itemData then
+                return
+            end
+            GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
+            if button.itemData.itemLink then
+                GameTooltip:SetHyperlink(button.itemData.itemLink)
+                GameTooltip:AddLine(" ")
+            end
+            if REA.activeTab == "gems" then
+                local socketCount = tonumber(button.itemData.gemSocketCount) or 0
+                local index
+                for index = 1, 4 do
+                    local gem = button.itemData.gems and button.itemData.gems[index]
+                    if gem then
+                        local gemLabel = gem.itemLink or gem.name or gem.effect or "Unknown gem"
+                        GameTooltip:AddLine("Камень " .. tostring(index) .. ": " .. gemLabel, 0.25, 1, 0.35, true)
+                        if gem.effect and gem.effect ~= gem.name then
+                            GameTooltip:AddLine("  " .. gem.effect, 0.70, 0.85, 1, true)
+                        end
+                    end
+                end
+                local emptyCount = tonumber(button.itemData.gemEmptyCount) or 0
+                if emptyCount > 0 then
+                    GameTooltip:AddLine("Пустых сокетов: " .. tostring(emptyCount), 1, 0.25, 0.20)
+                elseif socketCount <= 0 then
+                    GameTooltip:AddLine("У вещи нет сокетов", 0.60, 0.60, 0.60)
+                end
+            elseif button.itemData.enchantID and button.itemData.enchantID ~= 0 then
+                GameTooltip:AddLine("Чары: " .. (button.itemData.enchantText or ("Unknown enchant ID " .. button.itemData.enchantID)), 0.25, 1, 0.35)
+                GameTooltip:AddLine("Enchant ID: " .. button.itemData.enchantID, 0.65, 0.85, 1)
+            elseif button.itemData.enchantExpected then
+                GameTooltip:AddLine("Постоянные чары не найдены", 1, 0.25, 0.20)
+            end
+            GameTooltip:Show()
+        end)
+        cell:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+        row.gearCells[column] = cell
+    end
+
+    self.Rows[index] = row
+    return row
+end
+
+function REA:UpdateHeaders()
+    local slots = self:GetVisibleSlots()
+    local column
+    local firstSlot = ((self.gearPage - 1) * self.GEAR_COLUMNS_PER_PAGE) + 1
+    for column = 1, self.GEAR_COLUMNS_PER_PAGE do
+        local slot = slots[firstSlot + column - 1]
+        local header = self.GearHeaders[column]
+        if slot then
+            header:SetText(slot.short)
+            header.slotData = slot
+            header:Show()
+        else
+            header.slotData = nil
+            header:Hide()
+        end
+    end
+    local totalPages = math.max(1, math.ceil(#slots / self.GEAR_COLUMNS_PER_PAGE))
+    self.PageText:SetText(string.format("Вещи %d/%d", self.gearPage, totalPages))
+    if self.gearPage <= 1 then
+        self.PrevButton:Disable()
+    else
+        self.PrevButton:Enable()
+    end
+    if self.gearPage >= totalPages then
+        self.NextButton:Disable()
+    else
+        self.NextButton:Enable()
+    end
+end
+
+function REA:RefreshUI()
+    if not self.MainFrame then
+        return
+    end
+    self.results = self.results or {}
+    self.TableChild:SetHeight(math.max(1, #self.results * self.ROW_HEIGHT))
+
+    local slots = self:GetVisibleSlots()
+    local i
+    for i = 1, #self.results do
+        local result = self.results[i]
+        local row = self.Rows[i] or self:CreateRow(i)
+        row:Show()
+        row.nameButton.resultData = result
+        row.name:SetText(result.name or "?")
+        row.nameButton:Enable()
+        local classColor = RAID_CLASS_COLORS and RAID_CLASS_COLORS[result.classFile]
+        if classColor then
+            row.name:SetTextColor(classColor.r, classColor.g, classColor.b)
+            row.class:SetTextColor(classColor.r, classColor.g, classColor.b)
+        else
+            row.name:SetTextColor(1, 1, 1)
+            row.class:SetTextColor(0.85, 0.85, 0.85)
+        end
+        row.class:SetText(result.class or "?")
+        row.build:SetText(result.build or "—")
+        row.status:SetText(result.statusText or "—")
+        local statusColor = STATUS_COLORS[result.status]
+        if statusColor then
+            row.status:SetTextColor(statusColor[1], statusColor[2], statusColor[3])
+        else
+            row.status:SetTextColor(0.85, 0.85, 0.85)
+        end
+
+        local firstSlot = ((self.gearPage - 1) * self.GEAR_COLUMNS_PER_PAGE) + 1
+        local column
+        for column = 1, self.GEAR_COLUMNS_PER_PAGE do
+            local slot = slots[firstSlot + column - 1]
+            local cell = row.gearCells[column]
+            if slot then
+                local item = result.gear and result.gear[slot.key]
+                cell.itemData = item
+                if item then
+                    if self.activeTab == "gems" then
+                        SetCellText(cell, item.gemDisplayText or "—", GEM_CELL_COLORS[item.gemState or "unavailable"])
+                    else
+                        SetCellText(cell, item.displayText, CELL_COLORS[item.state])
+                    end
+                else
+                    if self.activeTab == "gems" then
+                        SetCellText(cell, "—", GEM_CELL_COLORS.unavailable)
+                    else
+                        SetCellText(cell, "—", CELL_COLORS.unavailable)
+                    end
+                end
+                cell:Show()
+            else
+                cell.itemData = nil
+                cell:Hide()
+            end
+        end
+    end
+
+    for i = #self.results + 1, #self.Rows do
+        self.Rows[i]:Hide()
+    end
+    self:UpdateHeaders()
+    self:UpdateProgress()
+end
+
+function REA:UpdateProgress()
+    if not self.StatusText then
+        return
+    end
+    if self.scanning then
+        local total = self.queue and #self.queue or 0
+        local currentName = self.current and self.current.name
+        if currentName then
+            self.StatusText:SetText(string.format("Проверка: %d/%d — %s", math.min(self.processed, total), total, currentName))
+        else
+            self.StatusText:SetText(string.format("Проверка: %d/%d", math.min(self.processed, total), total))
+        end
+        self.ScanButton:SetText("Перезапустить")
+        self.StopButton:Enable()
+    else
+        local savedAt = AntiInspectorDB and AntiInspectorDB.lastScan and AntiInspectorDB.lastScan.at
+        if savedAt then
+            self.StatusText:SetText("Последняя таблица: " .. date("%d.%m.%Y %H:%M", savedAt))
+        else
+            self.StatusText:SetText("Проверка ещё не запускалась")
+        end
+        self.ScanButton:SetText("Проверить группу")
+        self.StopButton:Disable()
+    end
+end
+
+local function QuoteTSV(value)
+    value = tostring(value or "")
+    value = string.gsub(value, "[\t\r\n]", " ")
+    return value
+end
+
+local ENGLISH_CLASS_NAMES = {
+    DEATHKNIGHT = "Death Knight",
+    DRUID = "Druid",
+    HUNTER = "Hunter",
+    MAGE = "Mage",
+    PALADIN = "Paladin",
+    PRIEST = "Priest",
+    ROGUE = "Rogue",
+    SHAMAN = "Shaman",
+    WARLOCK = "Warlock",
+    WARRIOR = "Warrior",
+}
+
+local ENGLISH_TALENT_TREES = {
+    DEATHKNIGHT = { "Blood", "Frost", "Unholy" },
+    DRUID = { "Balance", "Feral Combat", "Restoration" },
+    HUNTER = { "Beast Mastery", "Marksmanship", "Survival" },
+    MAGE = { "Arcane", "Fire", "Frost" },
+    PALADIN = { "Holy", "Protection", "Retribution" },
+    PRIEST = { "Discipline", "Holy", "Shadow" },
+    ROGUE = { "Assassination", "Combat", "Subtlety" },
+    SHAMAN = { "Elemental", "Enhancement", "Restoration" },
+    WARLOCK = { "Affliction", "Demonology", "Destruction" },
+    WARRIOR = { "Arms", "Fury", "Protection" },
+}
+
+local ENGLISH_STATUS_TEXT = {
+    ok = "Ready",
+    partial = "No talents",
+    failed = "No data",
+    changed = "Roster changed",
+    offline = "Offline",
+    far = "Out of range",
+    timeout = "No response",
+}
+
+local function EnglishBuild(result)
+    local points = result and result.talentPoints
+    if not points then
+        return "N/A"
+    end
+
+    local point1 = tonumber(points[1]) or 0
+    local point2 = tonumber(points[2]) or 0
+    local point3 = tonumber(points[3]) or 0
+    local values = { point1, point2, point3 }
+    local bestIndex = 1
+    local bestPoints = point1
+    local i
+    for i = 2, 3 do
+        if values[i] > bestPoints then
+            bestIndex = i
+            bestPoints = values[i]
+        end
+    end
+    if bestPoints <= 0 then
+        return "No data"
+    end
+
+    local trees = ENGLISH_TALENT_TREES[result.classFile]
+    local treeName = trees and trees[bestIndex] or "Unknown"
+    return string.format("%s %d/%d/%d", treeName, point1, point2, point3)
+end
+
+local function EnglishEnchant(item)
+    local enchantID = item and tonumber(item.enchantID)
+    if not enchantID or enchantID == 0 then
+        return ""
+    end
+    return REA.EnchantFallbacks[enchantID] or ("Unknown enchant ID " .. tostring(enchantID))
+end
+
+local function EnglishGems(item)
+    if not item then
+        return ""
+    end
+    local values = {}
+    local index
+    for index = 1, 4 do
+        local gem = item.gems and item.gems[index]
+        local gemEnchantID = gem and tonumber(gem.enchantID)
+            or (item.gemEnchantIDs and tonumber(item.gemEnchantIDs[index]))
+        local isSocketMarker = index == 4 and item.linkSocketEnchantID ~= nil
+        if gemEnchantID and gemEnchantID ~= 0 and not isSocketMarker then
+            table.insert(values, REA.EnchantFallbacks[gemEnchantID]
+                or ("Unknown gem effect ID " .. tostring(gemEnchantID)))
+        end
+    end
+    local emptyCount = tonumber(item.gemEmptyCount) or 0
+    if emptyCount == 1 then
+        table.insert(values, "EMPTY SOCKET")
+    elseif emptyCount > 1 then
+        table.insert(values, "EMPTY SOCKET x" .. tostring(emptyCount))
+    end
+    return table.concat(values, "; ")
+end
+
+local function EnglishSocketCount(item)
+    if not item or item.gemState == "unavailable" or item.gemState == "unknown" then
+        return "No data"
+    end
+    if not item.itemLink then
+        return "No item"
+    end
+
+    local socketCount = tonumber(item.gemSocketCount) or 0
+    if socketCount <= 0 then
+        return "No sockets"
+    end
+    return tostring(socketCount)
+end
+
+local function CharacterExportValues(result)
+    return {
+        QuoteTSV(result.name),
+        QuoteTSV(ENGLISH_CLASS_NAMES[result.classFile] or result.classFile or "Unknown"),
+        QuoteTSV(EnglishBuild(result)),
+        QuoteTSV(ENGLISH_STATUS_TEXT[result.status] or "Unknown"),
+    }
+end
+
+function REA:BuildEnchantExportText()
+    local header = { "Name", "Class", "Build", "Status" }
+    local i
+    for i = 1, #self.Slots do
+        local slot = self.Slots[i]
+        table.insert(header, slot.key .. "_Enchant")
+    end
+
+    local lines = { table.concat(header, "\t") }
+    local rowIndex
+    for rowIndex = 1, #(self.results or {}) do
+        local result = self.results[rowIndex]
+        local values = CharacterExportValues(result)
+        for i = 1, #self.Slots do
+            local slot = self.Slots[i]
+            local item = result.gear and result.gear[slot.key]
+            table.insert(values, QuoteTSV(EnglishEnchant(item)))
+        end
+        table.insert(lines, table.concat(values, "\t"))
+    end
+    return table.concat(lines, "\n")
+end
+
+function REA:BuildGemExportText()
+    local header = { "Name", "Class", "Build", "Status" }
+    local i
+    for i = 1, #self.GemSlots do
+        table.insert(header, self.GemSlots[i].key .. "_SocketCount")
+        table.insert(header, self.GemSlots[i].key .. "_Gem")
+    end
+
+    local lines = { table.concat(header, "\t") }
+    local rowIndex
+    for rowIndex = 1, #(self.results or {}) do
+        local result = self.results[rowIndex]
+        local values = CharacterExportValues(result)
+        for i = 1, #self.GemSlots do
+            local slot = self.GemSlots[i]
+            local item = result.gear and result.gear[slot.key]
+            table.insert(values, QuoteTSV(EnglishSocketCount(item)))
+            table.insert(values, QuoteTSV(EnglishGems(item)))
+        end
+        table.insert(lines, table.concat(values, "\t"))
+    end
+    return table.concat(lines, "\n")
+end
+
+function REA:BuildExportText()
+    if self.activeTab == "gems" then
+        return self:BuildGemExportText()
+    end
+    return self:BuildEnchantExportText()
+end
+
+function REA:ShowExport()
+    if not self.ExportFrame then
+        return
+    end
+    self.ExportEditBox:SetText(self:BuildExportText())
+    if self.ExportTitle then
+        if self.activeTab == "gems" then
+            self.ExportTitle:SetText("Экспорт камней TSV — Ctrl+C")
+        else
+            self.ExportTitle:SetText("Экспорт чар TSV — Ctrl+C")
+        end
+    end
+    self.ExportFrame:Show()
+    self.ExportEditBox:SetFocus()
+    self.ExportEditBox:HighlightText()
+end
+
+function REA:ShowWindow()
+    if self.MainFrame then
+        self.MainFrame:Show()
+        self:RefreshUI()
+    end
+end
+
+local MINIMAP_BUTTON_RADIUS = 80
+
+local function PositionMinimapButton(button, angle)
+    angle = tonumber(angle) or 225
+    local radians = math.rad(angle)
+    button:ClearAllPoints()
+    button:SetPoint(
+        "CENTER",
+        Minimap,
+        "CENTER",
+        math.cos(radians) * MINIMAP_BUTTON_RADIUS,
+        math.sin(radians) * MINIMAP_BUTTON_RADIUS
+    )
+end
+
+local function UpdateMinimapButtonFromCursor(button)
+    local centerX, centerY = Minimap:GetCenter()
+    local cursorX, cursorY = GetCursorPosition()
+    local scale = Minimap:GetEffectiveScale()
+    if not centerX or not centerY or not scale or scale == 0 then
+        return
+    end
+
+    cursorX = cursorX / scale
+    cursorY = cursorY / scale
+    local angle = math.deg(math.atan2(cursorY - centerY, cursorX - centerX))
+    AntiInspectorDB.minimapAngle = angle
+    PositionMinimapButton(button, angle)
+end
+
+function REA:InitializeMinimapButton()
+    if self.MinimapButton or not Minimap then
+        return
+    end
+
+    local button = CreateFrame("Button", "AntiInspectorMinimapButton", Minimap)
+    button:SetWidth(31)
+    button:SetHeight(31)
+    button:SetFrameStrata("MEDIUM")
+    button:SetFrameLevel(8)
+    button:RegisterForClicks("LeftButtonUp")
+    button:RegisterForDrag("LeftButton")
+    button:SetMovable(true)
+
+    local background = button:CreateTexture(nil, "BACKGROUND")
+    background:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+    background:SetWidth(20)
+    background:SetHeight(20)
+    background:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -5)
+    button.background = background
+
+    local icon = button:CreateTexture(nil, "ARTWORK")
+    icon:SetTexture("Interface\\Icons\\INV_Enchant_EssenceCosmicGreater")
+    icon:SetWidth(20)
+    icon:SetHeight(20)
+    icon:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -5)
+    icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+    button.icon = icon
+
+    local border = button:CreateTexture(nil, "OVERLAY")
+    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    border:SetWidth(53)
+    border:SetHeight(53)
+    border:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
+    button.border = border
+
+    button:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+
+    button:SetScript("OnClick", function()
+        if REA.MainFrame and REA.MainFrame:IsShown() then
+            REA.MainFrame:Hide()
+        else
+            REA:ShowWindow()
+        end
+    end)
+    button:SetScript("OnDragStart", function(dragged)
+        dragged.dragging = true
+        GameTooltip:Hide()
+        dragged:SetScript("OnUpdate", UpdateMinimapButtonFromCursor)
+    end)
+    button:SetScript("OnDragStop", function(dragged)
+        dragged.dragging = nil
+        dragged:SetScript("OnUpdate", nil)
+        UpdateMinimapButtonFromCursor(dragged)
+    end)
+    button:SetScript("OnEnter", function(entered)
+        GameTooltip:SetOwner(entered, "ANCHOR_LEFT")
+        GameTooltip:SetText("AntiInspector", 1, 0.82, 0)
+        GameTooltip:AddLine("ЛКМ: открыть или закрыть окно", 1, 1, 1)
+        GameTooltip:AddLine("Перетащите: изменить положение", 0.65, 0.85, 1)
+        GameTooltip:Show()
+    end)
+    button:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    self.MinimapButton = button
+    PositionMinimapButton(button, AntiInspectorDB.minimapAngle)
+end
+
+function REA:InitializeUI()
+    if self.MainFrame then
+        return
+    end
+
+    self.gearPage = 1
+    self.activeTab = "enchants"
+    self.Rows = {}
+    self.GearHeaders = {}
+
+    local frame = CreateFrame("Frame", "AntiInspectorFrame", UIParent)
+    frame:SetWidth(1130)
+    frame:SetHeight(620)
+    frame:SetPoint("CENTER")
+    frame:SetFrameStrata("DIALOG")
+    frame:SetMovable(true)
+    frame:EnableMouse(true)
+    frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", function(window) window:StartMoving() end)
+    frame:SetScript("OnDragStop", function(window) window:StopMovingOrSizing() end)
+    frame:SetClampedToScreen(true)
+    frame:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        tile = true,
+        tileSize = 32,
+        edgeSize = 32,
+        insets = { left = 11, right = 12, top = 12, bottom = 11 },
+    })
+    frame:Hide()
+    self.MainFrame = frame
+    table.insert(UISpecialFrames, "AntiInspectorFrame")
+
+    local title = MakeText(frame, "GameFontNormalLarge", "CENTER")
+    title:SetPoint("TOP", frame, "TOP", 0, -17)
+    title:SetText("AntiInspector 2.0.3 — WoW 3.3.5a")
+
+    local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+    close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -4)
+
+    self.ScanButton = MakeButton(frame, "Проверить группу", 130, 24)
+    self.ScanButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -47)
+    self.ScanButton:SetScript("OnClick", function() REA:StartScan() end)
+
+    self.StopButton = MakeButton(frame, "Стоп", 70, 24)
+    self.StopButton:SetPoint("LEFT", self.ScanButton, "RIGHT", 5, 0)
+    self.StopButton:SetScript("OnClick", function() REA:CancelScan(false) end)
+
+    self.ExportButton = MakeButton(frame, "Экспорт TSV", 105, 24)
+    self.ExportButton:SetPoint("LEFT", self.StopButton, "RIGHT", 5, 0)
+    self.ExportButton:SetScript("OnClick", function() REA:ShowExport() end)
+
+    self.StatusText = MakeText(frame)
+    self.StatusText:SetPoint("LEFT", self.ExportButton, "RIGHT", 12, 0)
+    self.StatusText:SetWidth(350)
+
+    self.EnchantTabButton = MakeButton(frame, "Чарки", 65, 24)
+    self.EnchantTabButton:SetPoint("LEFT", self.StatusText, "RIGHT", 8, 0)
+    self.EnchantTabButton:SetScript("OnClick", function() REA:SetActiveTab("enchants") end)
+
+    self.GemTabButton = MakeButton(frame, "Камни", 65, 24)
+    self.GemTabButton:SetPoint("LEFT", self.EnchantTabButton, "RIGHT", 5, 0)
+    self.GemTabButton:SetScript("OnClick", function() REA:SetActiveTab("gems") end)
+
+    self.PrevButton = MakeButton(frame, "<", 30, 24)
+    self.PrevButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -230, -47)
+    self.PrevButton:SetScript("OnClick", function()
+        REA.gearPage = math.max(1, REA.gearPage - 1)
+        REA:RefreshUI()
+    end)
+
+    self.PageText = MakeText(frame, "GameFontNormalSmall", "CENTER")
+    self.PageText:SetPoint("LEFT", self.PrevButton, "RIGHT", 4, 0)
+    self.PageText:SetWidth(145)
+
+    self.NextButton = MakeButton(frame, ">", 30, 24)
+    self.NextButton:SetPoint("LEFT", self.PageText, "RIGHT", 4, 0)
+    self.NextButton:SetScript("OnClick", function()
+        local pages = math.max(1, math.ceil(#REA:GetVisibleSlots() / REA.GEAR_COLUMNS_PER_PAGE))
+        REA.gearPage = math.min(pages, REA.gearPage + 1)
+        REA:RefreshUI()
+    end)
+
+    local headers = {
+        { text = "Ник", x = 22, width = 116 },
+        { text = "Класс", x = 144, width = 78 },
+        { text = "Билд", x = 228, width = 146 },
+        { text = "Статус", x = 380, width = 94 },
+    }
+    local i
+    for i = 1, #headers do
+        local info = headers[i]
+        local header = MakeText(frame, "GameFontNormalSmall", "LEFT")
+        header:SetPoint("TOPLEFT", frame, "TOPLEFT", info.x, -82)
+        header:SetWidth(info.width)
+        header:SetText(info.text)
+    end
+
+    for i = 1, self.GEAR_COLUMNS_PER_PAGE do
+        local header = CreateFrame("Button", nil, frame)
+        header:SetWidth(116)
+        header:SetHeight(22)
+        header:SetPoint("TOPLEFT", frame, "TOPLEFT", 480 + ((i - 1) * 120), -76)
+        header.text = MakeText(header, "GameFontNormalSmall", "CENTER")
+        header.text:SetAllPoints(header)
+        header.SetText = function(button, value) button.text:SetText(value) end
+        header:SetScript("OnEnter", function(button)
+            if button.slotData then
+                GameTooltip:SetOwner(button, "ANCHOR_TOP")
+                GameTooltip:SetText(button.slotData.full, 1, 0.82, 0)
+                GameTooltip:Show()
+            end
+        end)
+        header:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        self.GearHeaders[i] = header
+    end
+
+    local scroll = CreateFrame("ScrollFrame", "AntiInspectorScrollFrame", frame, "UIPanelScrollFrameTemplate")
+    scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -101)
+    scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -34, 58)
+    local child = CreateFrame("Frame", nil, scroll)
+    child:SetWidth(1065)
+    child:SetHeight(1)
+    scroll:SetScrollChild(child)
+    self.TableScroll = scroll
+    self.TableChild = child
+
+    self.LegendText = MakeText(frame, "GameFontHighlightSmall")
+    self.LegendText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 23)
+
+    local hint = MakeText(frame, "GameFontDisableSmall", "RIGHT")
+    hint:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 23)
+    hint:SetText("Клик по любому нику: проверить повторно")
+
+    local export = CreateFrame("Frame", "AntiInspectorExportFrame", UIParent)
+    export:SetWidth(800)
+    export:SetHeight(520)
+    export:SetPoint("CENTER")
+    export:SetFrameStrata("FULLSCREEN_DIALOG")
+    export:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        tile = true,
+        tileSize = 32,
+        edgeSize = 32,
+        insets = { left = 11, right = 12, top = 12, bottom = 11 },
+    })
+    export:Hide()
+    table.insert(UISpecialFrames, "AntiInspectorExportFrame")
+    self.ExportFrame = export
+
+    local exportTitle = MakeText(export, "GameFontNormalLarge", "CENTER")
+    exportTitle:SetPoint("TOP", export, "TOP", 0, -18)
+    exportTitle:SetText("Экспорт TSV — Ctrl+C")
+    self.ExportTitle = exportTitle
+    local exportClose = CreateFrame("Button", nil, export, "UIPanelCloseButton")
+    exportClose:SetPoint("TOPRIGHT", export, "TOPRIGHT", -4, -4)
+
+    local exportScroll = CreateFrame("ScrollFrame", "AntiInspectorExportScrollFrame", export, "UIPanelScrollFrameTemplate")
+    exportScroll:SetPoint("TOPLEFT", export, "TOPLEFT", 22, -52)
+    exportScroll:SetPoint("BOTTOMRIGHT", export, "BOTTOMRIGHT", -38, 22)
+    local editBox = CreateFrame("EditBox", nil, exportScroll)
+    editBox:SetMultiLine(true)
+    editBox:SetAutoFocus(false)
+    editBox:SetFontObject(ChatFontNormal)
+    editBox:SetWidth(735)
+    editBox:SetHeight(440)
+    editBox:SetTextInsets(4, 4, 4, 4)
+    editBox:SetScript("OnTextChanged", function(box)
+        ScrollingEdit_OnTextChanged(box, exportScroll)
+    end)
+    editBox:SetScript("OnCursorChanged", ScrollingEdit_OnCursorChanged)
+    editBox:SetScript("OnUpdate", function(box, elapsed)
+        ScrollingEdit_OnUpdate(box, elapsed, exportScroll)
+    end)
+    editBox:SetScript("OnEscapePressed", function(box)
+        box:ClearFocus()
+        export:Hide()
+    end)
+    exportScroll:SetScrollChild(editBox)
+    self.ExportEditBox = editBox
+
+    self:InitializeMinimapButton()
+    self:SetActiveTab("enchants")
+end

@@ -1,0 +1,10 @@
+## Interface: 30300
+## Title: AntiInspector
+## Notes: Manual party and raid enchant and gem audit for WoW 3.3.5a
+## Author: Codex
+## Version: 2.0.5
+## SavedVariables: AntiInspectorDB, RaidEnchantAuditDB
+
+Enchants.lua
+Core.lua
+UI.lua
