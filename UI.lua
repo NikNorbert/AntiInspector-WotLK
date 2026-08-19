@@ -669,7 +669,7 @@ function REA:InitializeUI()
 
     local title = MakeText(frame, "GameFontNormalLarge", "CENTER")
     title:SetPoint("TOP", frame, "TOP", 0, -17)
-    title:SetText("AntiInspector 2.0.3 — WoW 3.3.5a")
+    title:SetText("AntiInspector " .. tostring(REA.VERSION or "?") .. " — WoW 3.3.5a")
 
     local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -4)
