@@ -1,10 +1,12 @@
 ## Interface: 30300
 ## Title: AntiInspector
 ## Notes: Manual party and raid enchant and gem audit for WoW 3.3.5a
+## Notes-ruRU: Ручная проверка чарок и камней в группе и рейде для WoW 3.3.5a
 ## Author: Codex
 ## Version: 2.0.5
 ## SavedVariables: AntiInspectorDB, RaidEnchantAuditDB
 
 Enchants.lua
+Localization.lua
 Core.lua
 UI.lua

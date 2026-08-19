@@ -1,4 +1,5 @@
 local REA = AntiInspector
+local L = REA.L
 
 REA.GEAR_COLUMNS_PER_PAGE = 5
 REA.ROW_HEIGHT = 25
@@ -31,6 +32,66 @@ local STATUS_COLORS = {
     failed = { 1.00, 0.35, 0.25 },
     changed = { 1.00, 0.60, 0.20 },
 }
+
+local LOCALIZED_STATUS_TEXT = {
+    ok = L.READY,
+    partial = L.NO_TALENTS,
+    failed = L.NO_DATA,
+    changed = L.ROSTER_CHANGED,
+    offline = L.OFFLINE,
+    far = L.TOO_FAR,
+    timeout = L.NO_RESPONSE,
+}
+
+local function LocalizedStatus(result)
+    return result and (LOCALIZED_STATUS_TEXT[result.status] or result.statusText) or L.NO_DATA
+end
+
+local function LocalizedGemDisplay(item)
+    if not item then
+        return "—"
+    end
+    if item.gemState == "unavailable" or item.gemState == "none" then
+        return "—"
+    end
+    if item.gemState == "unknown" then
+        return L.NO_DATA
+    end
+    if item.gemState == "empty" then
+        return L.EMPTY
+    end
+
+    local values = {}
+    local index
+    for index = 1, 4 do
+        local gem = item.gems and item.gems[index]
+        if gem then
+            local linkName = gem.itemLink and string.match(gem.itemLink, "%[(.-)%]")
+            local displayText = gem.name or linkName or gem.displayText
+            if not displayText or displayText == "" then
+                if REA.isRussian then
+                    displayText = string.format(L.UNKNOWN_GEM_EFFECT_FMT, tostring(gem.enchantID or "?"))
+                else
+                    displayText = gem.effect or string.format(L.UNKNOWN_GEM_EFFECT_FMT, tostring(gem.enchantID or "?"))
+                end
+            end
+            table.insert(values, displayText)
+        end
+    end
+
+    local emptyCount = tonumber(item.gemEmptyCount) or 0
+    if emptyCount > 0 then
+        table.insert(values, L.EMPTY .. " x" .. tostring(emptyCount))
+    end
+    if #values <= 0 then
+        local socketCount = tonumber(item.gemSocketCount) or 0
+        if socketCount > 0 then
+            return L.EMPTY .. " x" .. tostring(socketCount)
+        end
+        return "—"
+    end
+    return table.concat(values, "; ")
+end
 
 local function MakeText(parent, font, justify)
     local text = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
@@ -82,9 +143,9 @@ function REA:SetActiveTab(tabName)
 
     if self.LegendText then
         if tabName == "gems" then
-            self.LegendText:SetText("|cff40ff59Камни установлены|r   |cffff4033ПУСТОЙ СОКЕТ|r   |cffffb733частично заполнено|r   |cff8c8c8c— сокетов нет|r")
+            self.LegendText:SetText(L.LEGEND_GEMS)
         else
-            self.LegendText:SetText("|cff40ff59Чары найдены|r   |cffff4033НЕТ ЧАР|r — слот обычно требует чар   |cff8c8c8c— слот обычно не чарится|r")
+            self.LegendText:SetText(L.LEGEND_ENCHANTS)
         end
     end
 
@@ -123,12 +184,13 @@ function REA:CreateRow(index)
         if button.resultData then
             GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
             GameTooltip:SetText(button.resultData.name or "?", 1, 0.82, 0)
+            local statusText = LocalizedStatus(button.resultData)
             if button.resultData.status == "ok" then
-                GameTooltip:AddLine("Статус: " .. (button.resultData.statusText or "Готово"), 0.35, 1, 0.35)
+                GameTooltip:AddLine(string.format(L.STATUS_FMT, statusText), 0.35, 1, 0.35)
             else
-                GameTooltip:AddLine("Статус: " .. (button.resultData.statusText or "Нет данных"), 1, 0.45, 0.25)
+                GameTooltip:AddLine(string.format(L.STATUS_FMT, statusText), 1, 0.45, 0.25)
             end
-            GameTooltip:AddLine("Нажмите, чтобы проверить этого персонажа ещё раз.", 0.35, 1, 0.35, true)
+            GameTooltip:AddLine(L.RETRY_TOOLTIP, 0.35, 1, 0.35, true)
             GameTooltip:Show()
         end
     end)
@@ -172,24 +234,26 @@ function REA:CreateRow(index)
                 for index = 1, 4 do
                     local gem = button.itemData.gems and button.itemData.gems[index]
                     if gem then
-                        local gemLabel = gem.itemLink or gem.name or gem.effect or "Unknown gem"
-                        GameTooltip:AddLine("Камень " .. tostring(index) .. ": " .. gemLabel, 0.25, 1, 0.35, true)
-                        if gem.effect and gem.effect ~= gem.name then
+                        local gemLabel = gem.itemLink or gem.name or gem.displayText or gem.effect or L.UNKNOWN_GEM
+                        GameTooltip:AddLine(string.format(L.GEM_FMT, index, gemLabel), 0.25, 1, 0.35, true)
+                        if not REA.isRussian and gem.effect and gem.effect ~= gem.name then
                             GameTooltip:AddLine("  " .. gem.effect, 0.70, 0.85, 1, true)
                         end
                     end
                 end
                 local emptyCount = tonumber(button.itemData.gemEmptyCount) or 0
                 if emptyCount > 0 then
-                    GameTooltip:AddLine("Пустых сокетов: " .. tostring(emptyCount), 1, 0.25, 0.20)
+                    GameTooltip:AddLine(string.format(L.EMPTY_SOCKETS_FMT, emptyCount), 1, 0.25, 0.20)
                 elseif socketCount <= 0 then
-                    GameTooltip:AddLine("У вещи нет сокетов", 0.60, 0.60, 0.60)
+                    GameTooltip:AddLine(L.NO_SOCKETS, 0.60, 0.60, 0.60)
                 end
             elseif button.itemData.enchantID and button.itemData.enchantID ~= 0 then
-                GameTooltip:AddLine("Чары: " .. (button.itemData.enchantText or ("Unknown enchant ID " .. button.itemData.enchantID)), 0.25, 1, 0.35)
+                local enchantText = button.itemData.enchantText
+                    or string.format(L.UNKNOWN_ENCHANT_FMT, tostring(button.itemData.enchantID))
+                GameTooltip:AddLine(string.format(L.ENCHANT_FMT, enchantText), 0.25, 1, 0.35)
                 GameTooltip:AddLine("Enchant ID: " .. button.itemData.enchantID, 0.65, 0.85, 1)
             elseif button.itemData.enchantExpected then
-                GameTooltip:AddLine("Постоянные чары не найдены", 1, 0.25, 0.20)
+                GameTooltip:AddLine(L.NO_PERMANENT_ENCHANT, 1, 0.25, 0.20)
             end
             GameTooltip:Show()
         end)
@@ -220,7 +284,7 @@ function REA:UpdateHeaders()
         end
     end
     local totalPages = math.max(1, math.ceil(#slots / self.GEAR_COLUMNS_PER_PAGE))
-    self.PageText:SetText(string.format("Вещи %d/%d", self.gearPage, totalPages))
+    self.PageText:SetText(string.format(L.ITEMS_PAGE_FMT, self.gearPage, totalPages))
     if self.gearPage <= 1 then
         self.PrevButton:Disable()
     else
@@ -259,7 +323,7 @@ function REA:RefreshUI()
         end
         row.class:SetText(result.class or "?")
         row.build:SetText(result.build or "—")
-        row.status:SetText(result.statusText or "—")
+        row.status:SetText(LocalizedStatus(result))
         local statusColor = STATUS_COLORS[result.status]
         if statusColor then
             row.status:SetTextColor(statusColor[1], statusColor[2], statusColor[3])
@@ -277,7 +341,7 @@ function REA:RefreshUI()
                 cell.itemData = item
                 if item then
                     if self.activeTab == "gems" then
-                        SetCellText(cell, item.gemDisplayText or "—", GEM_CELL_COLORS[item.gemState or "unavailable"])
+                        SetCellText(cell, LocalizedGemDisplay(item), GEM_CELL_COLORS[item.gemState or "unavailable"])
                     else
                         SetCellText(cell, item.displayText, CELL_COLORS[item.state])
                     end
@@ -311,20 +375,20 @@ function REA:UpdateProgress()
         local total = self.queue and #self.queue or 0
         local currentName = self.current and self.current.name
         if currentName then
-            self.StatusText:SetText(string.format("Проверка: %d/%d — %s", math.min(self.processed, total), total, currentName))
+            self.StatusText:SetText(string.format(L.SCANNING_NAME_FMT, math.min(self.processed, total), total, currentName))
         else
-            self.StatusText:SetText(string.format("Проверка: %d/%d", math.min(self.processed, total), total))
+            self.StatusText:SetText(string.format(L.SCANNING_FMT, math.min(self.processed, total), total))
         end
-        self.ScanButton:SetText("Перезапустить")
+        self.ScanButton:SetText(L.RESTART)
         self.StopButton:Enable()
     else
         local savedAt = AntiInspectorDB and AntiInspectorDB.lastScan and AntiInspectorDB.lastScan.at
         if savedAt then
-            self.StatusText:SetText("Последняя таблица: " .. date("%d.%m.%Y %H:%M", savedAt))
+            self.StatusText:SetText(string.format(L.LAST_TABLE_FMT, date("%d.%m.%Y %H:%M", savedAt)))
         else
-            self.StatusText:SetText("Проверка ещё не запускалась")
+            self.StatusText:SetText(L.NEVER_SCANNED)
         end
-        self.ScanButton:SetText("Проверить группу")
+        self.ScanButton:SetText(L.CHECK_GROUP)
         self.StopButton:Disable()
     end
 end
@@ -517,9 +581,9 @@ function REA:ShowExport()
     self.ExportEditBox:SetText(self:BuildExportText())
     if self.ExportTitle then
         if self.activeTab == "gems" then
-            self.ExportTitle:SetText("Экспорт камней TSV — Ctrl+C")
+            self.ExportTitle:SetText(L.EXPORT_GEMS_TITLE)
         else
-            self.ExportTitle:SetText("Экспорт чар TSV — Ctrl+C")
+            self.ExportTitle:SetText(L.EXPORT_ENCHANTS_TITLE)
         end
     end
     self.ExportFrame:Show()
@@ -622,8 +686,8 @@ function REA:InitializeMinimapButton()
     button:SetScript("OnEnter", function(entered)
         GameTooltip:SetOwner(entered, "ANCHOR_LEFT")
         GameTooltip:SetText("AntiInspector", 1, 0.82, 0)
-        GameTooltip:AddLine("ЛКМ: открыть или закрыть окно", 1, 1, 1)
-        GameTooltip:AddLine("Перетащите: изменить положение", 0.65, 0.85, 1)
+        GameTooltip:AddLine(L.MINIMAP_TOGGLE, 1, 1, 1)
+        GameTooltip:AddLine(L.MINIMAP_DRAG, 0.65, 0.85, 1)
         GameTooltip:Show()
     end)
     button:SetScript("OnLeave", function()
@@ -674,15 +738,15 @@ function REA:InitializeUI()
     local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -4)
 
-    self.ScanButton = MakeButton(frame, "Проверить группу", 130, 24)
+    self.ScanButton = MakeButton(frame, L.CHECK_GROUP, 130, 24)
     self.ScanButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -47)
     self.ScanButton:SetScript("OnClick", function() REA:StartScan() end)
 
-    self.StopButton = MakeButton(frame, "Стоп", 70, 24)
+    self.StopButton = MakeButton(frame, L.STOP, 70, 24)
     self.StopButton:SetPoint("LEFT", self.ScanButton, "RIGHT", 5, 0)
     self.StopButton:SetScript("OnClick", function() REA:CancelScan(false) end)
 
-    self.ExportButton = MakeButton(frame, "Экспорт TSV", 105, 24)
+    self.ExportButton = MakeButton(frame, L.EXPORT_TSV, 105, 24)
     self.ExportButton:SetPoint("LEFT", self.StopButton, "RIGHT", 5, 0)
     self.ExportButton:SetScript("OnClick", function() REA:ShowExport() end)
 
@@ -690,11 +754,11 @@ function REA:InitializeUI()
     self.StatusText:SetPoint("LEFT", self.ExportButton, "RIGHT", 12, 0)
     self.StatusText:SetWidth(350)
 
-    self.EnchantTabButton = MakeButton(frame, "Чарки", 65, 24)
+    self.EnchantTabButton = MakeButton(frame, L.TAB_ENCHANTS, 75, 24)
     self.EnchantTabButton:SetPoint("LEFT", self.StatusText, "RIGHT", 8, 0)
     self.EnchantTabButton:SetScript("OnClick", function() REA:SetActiveTab("enchants") end)
 
-    self.GemTabButton = MakeButton(frame, "Камни", 65, 24)
+    self.GemTabButton = MakeButton(frame, L.TAB_GEMS, 65, 24)
     self.GemTabButton:SetPoint("LEFT", self.EnchantTabButton, "RIGHT", 5, 0)
     self.GemTabButton:SetScript("OnClick", function() REA:SetActiveTab("gems") end)
 
@@ -718,10 +782,10 @@ function REA:InitializeUI()
     end)
 
     local headers = {
-        { text = "Ник", x = 22, width = 116 },
-        { text = "Класс", x = 144, width = 78 },
-        { text = "Билд", x = 228, width = 146 },
-        { text = "Статус", x = 380, width = 94 },
+        { text = L.HEADER_NAME, x = 22, width = 116 },
+        { text = L.HEADER_CLASS, x = 144, width = 78 },
+        { text = L.HEADER_BUILD, x = 228, width = 146 },
+        { text = L.HEADER_STATUS, x = 380, width = 94 },
     }
     local i
     for i = 1, #headers do
@@ -766,7 +830,7 @@ function REA:InitializeUI()
 
     local hint = MakeText(frame, "GameFontDisableSmall", "RIGHT")
     hint:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 23)
-    hint:SetText("Клик по любому нику: проверить повторно")
+    hint:SetText(L.RETRY_HINT)
 
     local export = CreateFrame("Frame", "AntiInspectorExportFrame", UIParent)
     export:SetWidth(800)
@@ -787,7 +851,7 @@ function REA:InitializeUI()
 
     local exportTitle = MakeText(export, "GameFontNormalLarge", "CENTER")
     exportTitle:SetPoint("TOP", export, "TOP", 0, -18)
-    exportTitle:SetText("Экспорт TSV — Ctrl+C")
+    exportTitle:SetText(L.EXPORT_TITLE)
     self.ExportTitle = exportTitle
     local exportClose = CreateFrame("Button", nil, export, "UIPanelCloseButton")
     exportClose:SetPoint("TOPRIGHT", export, "TOPRIGHT", -4, -4)

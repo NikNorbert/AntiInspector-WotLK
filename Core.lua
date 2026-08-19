@@ -1,5 +1,6 @@
 AntiInspector = AntiInspector or {}
 local REA = AntiInspector
+local L = REA.L
 
 REA.VERSION = "2.0.5"
 REA.INSPECT_TIMEOUT = 4.0
@@ -8,39 +9,39 @@ REA.INSPECT_POLL_DELAY = 0.25
 REA.INSPECT_TALENT_GRACE = 1.5
 
 REA.Slots = {
-    { id = 1,  key = "HEAD",      short = "Голова",     full = "Голова",                    normallyEnchantable = true },
-    { id = 3,  key = "SHOULDER",  short = "Плечи",      full = "Плечи",                     normallyEnchantable = true },
-    { id = 5,  key = "CHEST",     short = "Грудь",      full = "Нагрудник",                 normallyEnchantable = true },
-    { id = 6,  key = "WAIST",     short = "Пояс",       full = "Пояс" },
-    { id = 7,  key = "LEGS",      short = "Ноги",       full = "Поножи",                    normallyEnchantable = true },
-    { id = 8,  key = "FEET",      short = "Ступни",     full = "Обувь",                     normallyEnchantable = true },
-    { id = 9,  key = "WRIST",     short = "Запястья",   full = "Наручи",                    normallyEnchantable = true },
-    { id = 10, key = "HANDS",     short = "Кисти",      full = "Перчатки",                  normallyEnchantable = true },
-    { id = 15, key = "BACK",      short = "Плащ",       full = "Плащ",                      normallyEnchantable = true },
-    { id = 16, key = "MAINHAND",  short = "Main Hand",  full = "Main Hand",                 normallyEnchantable = true },
-    { id = 17, key = "OFFHAND",   short = "Off hand",   full = "Off hand",                  conditionalEnchantable = true },
-    { id = 18, key = "RANGED",    short = "Дальний",    full = "Оружие дальнего боя" },
+    { id = 1,  key = "HEAD",      short = L.SLOTS.HEAD[1],      full = L.SLOTS.HEAD[2],      normallyEnchantable = true },
+    { id = 3,  key = "SHOULDER",  short = L.SLOTS.SHOULDER[1],  full = L.SLOTS.SHOULDER[2],  normallyEnchantable = true },
+    { id = 5,  key = "CHEST",     short = L.SLOTS.CHEST[1],     full = L.SLOTS.CHEST[2],     normallyEnchantable = true },
+    { id = 6,  key = "WAIST",     short = L.SLOTS.WAIST[1],     full = L.SLOTS.WAIST[2] },
+    { id = 7,  key = "LEGS",      short = L.SLOTS.LEGS[1],      full = L.SLOTS.LEGS[2],      normallyEnchantable = true },
+    { id = 8,  key = "FEET",      short = L.SLOTS.FEET[1],      full = L.SLOTS.FEET[2],      normallyEnchantable = true },
+    { id = 9,  key = "WRIST",     short = L.SLOTS.WRIST[1],     full = L.SLOTS.WRIST[2],     normallyEnchantable = true },
+    { id = 10, key = "HANDS",     short = L.SLOTS.HANDS[1],     full = L.SLOTS.HANDS[2],     normallyEnchantable = true },
+    { id = 15, key = "BACK",      short = L.SLOTS.BACK[1],      full = L.SLOTS.BACK[2],      normallyEnchantable = true },
+    { id = 16, key = "MAINHAND",  short = L.SLOTS.MAINHAND[1],  full = L.SLOTS.MAINHAND[2],  normallyEnchantable = true },
+    { id = 17, key = "OFFHAND",   short = L.SLOTS.OFFHAND[1],   full = L.SLOTS.OFFHAND[2],   conditionalEnchantable = true },
+    { id = 18, key = "RANGED",    short = L.SLOTS.RANGED[1],    full = L.SLOTS.RANGED[2] },
 }
 
 -- The gem tab includes every equipment slot that can carry sockets in WotLK.
 -- Shirt and tabard are intentionally excluded.
 REA.GemSlots = {
-    { id = 1,  key = "HEAD",      short = "Голова",     full = "Голова" },
-    { id = 2,  key = "NECK",      short = "Шея",        full = "Шея" },
-    { id = 3,  key = "SHOULDER",  short = "Плечи",      full = "Плечи" },
-    { id = 5,  key = "CHEST",     short = "Грудь",      full = "Нагрудник" },
-    { id = 6,  key = "WAIST",     short = "Пояс",       full = "Пояс" },
-    { id = 7,  key = "LEGS",      short = "Ноги",       full = "Поножи" },
-    { id = 8,  key = "FEET",      short = "Ступни",     full = "Обувь" },
-    { id = 9,  key = "WRIST",     short = "Запястья",   full = "Наручи" },
-    { id = 10, key = "HANDS",     short = "Кисти",      full = "Перчатки" },
-    { id = 11, key = "RING1",     short = "Кольцо 1",   full = "Первое кольцо" },
-    { id = 12, key = "RING2",     short = "Кольцо 2",   full = "Второе кольцо" },
-    { id = 13, key = "TRINKET1",  short = "Аксесс. 1",  full = "Первый аксессуар" },
-    { id = 14, key = "TRINKET2",  short = "Аксесс. 2",  full = "Второй аксессуар" },
-    { id = 16, key = "MAINHAND",  short = "Main Hand",  full = "Main Hand" },
-    { id = 17, key = "OFFHAND",   short = "Off hand",   full = "Off hand" },
-    { id = 18, key = "RANGED",    short = "Дальний",    full = "Оружие дальнего боя" },
+    { id = 1,  key = "HEAD",      short = L.SLOTS.HEAD[1],      full = L.SLOTS.HEAD[2] },
+    { id = 2,  key = "NECK",      short = L.SLOTS.NECK[1],      full = L.SLOTS.NECK[2] },
+    { id = 3,  key = "SHOULDER",  short = L.SLOTS.SHOULDER[1],  full = L.SLOTS.SHOULDER[2] },
+    { id = 5,  key = "CHEST",     short = L.SLOTS.CHEST[1],     full = L.SLOTS.CHEST[2] },
+    { id = 6,  key = "WAIST",     short = L.SLOTS.WAIST[1],     full = L.SLOTS.WAIST[2] },
+    { id = 7,  key = "LEGS",      short = L.SLOTS.LEGS[1],      full = L.SLOTS.LEGS[2] },
+    { id = 8,  key = "FEET",      short = L.SLOTS.FEET[1],      full = L.SLOTS.FEET[2] },
+    { id = 9,  key = "WRIST",     short = L.SLOTS.WRIST[1],     full = L.SLOTS.WRIST[2] },
+    { id = 10, key = "HANDS",     short = L.SLOTS.HANDS[1],     full = L.SLOTS.HANDS[2] },
+    { id = 11, key = "RING1",     short = L.SLOTS.RING1[1],     full = L.SLOTS.RING1[2] },
+    { id = 12, key = "RING2",     short = L.SLOTS.RING2[1],     full = L.SLOTS.RING2[2] },
+    { id = 13, key = "TRINKET1",  short = L.SLOTS.TRINKET1[1],  full = L.SLOTS.TRINKET1[2] },
+    { id = 14, key = "TRINKET2",  short = L.SLOTS.TRINKET2[1],  full = L.SLOTS.TRINKET2[2] },
+    { id = 16, key = "MAINHAND",  short = L.SLOTS.MAINHAND[1],  full = L.SLOTS.MAINHAND[2] },
+    { id = 17, key = "OFFHAND",   short = L.SLOTS.OFFHAND[1],   full = L.SLOTS.OFFHAND[2] },
+    { id = 18, key = "RANGED",    short = L.SLOTS.RANGED[1],    full = L.SLOTS.RANGED[2] },
 }
 
 -- Scan the union of both report layouts.  BACK is still required by the enchant
@@ -244,16 +245,20 @@ local function FillGemData(item)
             end
             local effect = REA.EnchantFallbacks[gemEnchantID]
                 or ("Unknown gem effect ID " .. tostring(gemEnchantID))
+            local displayText = gemName
+                or (REA.isRussian and string.format(L.UNKNOWN_GEM_EFFECT_FMT, tostring(gemEnchantID)))
+                or effect
             item.gems[index] = {
                 index = index,
                 enchantID = gemEnchantID,
                 name = gemName,
                 itemLink = gemLink,
                 effect = effect,
+                displayText = displayText,
             }
             filledCount = filledCount + 1
             highestFilled = index
-            table.insert(effects, effect)
+            table.insert(effects, displayText)
         end
     end
 
@@ -271,10 +276,10 @@ local function FillGemData(item)
         item.gemDisplayText = "—"
         item.gemState = "none"
     elseif filledCount <= 0 then
-        item.gemDisplayText = "ПУСТО x" .. tostring(socketCount)
+        item.gemDisplayText = L.EMPTY .. " x" .. tostring(socketCount)
         item.gemState = "missing"
     elseif item.gemEmptyCount > 0 then
-        item.gemDisplayText = table.concat(effects, "; ") .. "; ПУСТО x" .. tostring(item.gemEmptyCount)
+        item.gemDisplayText = table.concat(effects, "; ") .. "; " .. L.EMPTY .. " x" .. tostring(item.gemEmptyCount)
         item.gemState = "partial"
     else
         item.gemDisplayText = table.concat(effects, "; ")
@@ -314,7 +319,7 @@ local function GetBuild(isInspect)
     end
 
     if bestPoints <= 0 then
-        return "Нет данных", points, names, activeGroup
+        return L.NO_DATA, points, names, activeGroup
     end
 
     local build = string.format("%s %d/%d/%d", names[bestIndex], points[1], points[2], points[3])
@@ -322,7 +327,7 @@ local function GetBuild(isInspect)
 end
 
 function REA:ScanUnit(entry, isInspect, talentsReady)
-    local build = "Нет данных"
+    local build = L.NO_DATA
     local talentPoints = { 0, 0, 0 }
     local talentTrees = { "?", "?", "?" }
     local talentGroup = nil
@@ -342,7 +347,7 @@ function REA:ScanUnit(entry, isInspect, talentsReady)
         talentTrees = talentTrees,
         talentGroup = talentGroup,
         status = "ok",
-        statusText = "Готово",
+        statusText = L.READY,
         gear = {},
     }
 
@@ -383,11 +388,11 @@ function REA:ScanUnit(entry, isInspect, talentsReady)
 
             if item.enchantID and item.enchantID ~= 0 then
                 item.enchantText = FindLocalizedEnchantText(itemLink, item.enchantID)
-                    or ("Unknown enchant ID " .. tostring(item.enchantID))
+                    or string.format(L.UNKNOWN_ENCHANT_FMT, tostring(item.enchantID))
                 item.displayText = item.enchantText
                 item.state = "enchanted"
             elseif item.enchantExpected then
-                item.displayText = "НЕТ ЧАР"
+                item.displayText = L.NO_ENCHANT
                 item.state = "missing"
             else
                 item.displayText = "—"
@@ -401,14 +406,14 @@ function REA:ScanUnit(entry, isInspect, talentsReady)
             item.gemState = "none"
             item.unavailableReason = "twoHandedMainHand"
         elseif texture then
-            item.displayText = "Нет данных"
+            item.displayText = L.NO_DATA
             item.state = "unknown"
-            item.gemDisplayText = "Нет данных"
+            item.gemDisplayText = L.NO_DATA
             item.gemState = "unknown"
         else
-            item.displayText = "ПУСТО"
+            item.displayText = L.EMPTY
             item.state = "empty"
-            item.gemDisplayText = "ПУСТО"
+            item.gemDisplayText = L.EMPTY
             item.gemState = "empty"
         end
         result.gear[slot.key] = item
@@ -416,10 +421,10 @@ function REA:ScanUnit(entry, isInspect, talentsReady)
 
     if isInspect and foundItems == 0 then
         result.status = "failed"
-        result.statusText = "Нет данных"
-    elseif build == "Нет данных" then
+        result.statusText = L.NO_DATA
+    elseif build == L.NO_DATA then
         result.status = "partial"
-        result.statusText = "Без талантов"
+        result.statusText = L.NO_TALENTS
     end
 
     return result
@@ -490,19 +495,19 @@ function REA:ProcessNext()
         self.processed = self.processed + 1
 
         if not UnitExists(entry.unit) or UnitGUID(entry.unit) ~= entry.guid then
-            self:SaveResult(self:MakeUnavailableResult(entry, "changed", "Состав изменён"))
+            self:SaveResult(self:MakeUnavailableResult(entry, "changed", L.ROSTER_CHANGED))
         elseif entry.isPlayer or UnitIsUnit(entry.unit, "player") then
             self:SaveResult(self:ScanUnit(entry, false, true))
         elseif not UnitIsConnected(entry.unit) then
-            self:SaveResult(self:MakeUnavailableResult(entry, "offline", "Нет связи"))
+            self:SaveResult(self:MakeUnavailableResult(entry, "offline", L.OFFLINE))
         elseif not UnitIsVisible(entry.unit) then
-            self:SaveResult(self:MakeUnavailableResult(entry, "far", "Слишком далеко"))
+            self:SaveResult(self:MakeUnavailableResult(entry, "far", L.TOO_FAR))
         elseif not CanInspect(entry.unit) then
-            self:SaveResult(self:MakeUnavailableResult(entry, "far", "Нельзя осмотреть"))
+            self:SaveResult(self:MakeUnavailableResult(entry, "far", L.CANNOT_INSPECT))
         else
             local inspectRange = CheckInteractDistance(entry.unit, 1)
             if inspectRange ~= 1 and inspectRange ~= true then
-                self:SaveResult(self:MakeUnavailableResult(entry, "far", "Слишком далеко"))
+                self:SaveResult(self:MakeUnavailableResult(entry, "far", L.TOO_FAR))
             else
                 self.current = entry
                 self.inspectReady = false
@@ -542,7 +547,7 @@ function REA:PollCurrent()
 
     local entry = self.current
     if not UnitExists(entry.unit) or UnitGUID(entry.unit) ~= entry.guid then
-        self:SaveResult(self:MakeUnavailableResult(entry, "changed", "Состав изменён"))
+        self:SaveResult(self:MakeUnavailableResult(entry, "changed", L.ROSTER_CHANGED))
         self.current = nil
         self.inspectStartedAt = nil
         self.inspectDeadline = nil
@@ -569,7 +574,7 @@ function REA:CollectCurrent()
     end
     local entry = self.current
     if not UnitExists(entry.unit) or UnitGUID(entry.unit) ~= entry.guid then
-        self:SaveResult(self:MakeUnavailableResult(entry, "changed", "Состав изменён"))
+        self:SaveResult(self:MakeUnavailableResult(entry, "changed", L.ROSTER_CHANGED))
     else
         self:SaveResult(self:ScanUnit(entry, true, self.inspectReady))
     end
@@ -585,7 +590,7 @@ function REA:TimeoutCurrent()
         return
     end
     local entry = self.current
-    self:SaveResult(self:MakeUnavailableResult(entry, "timeout", "Нет ответа"))
+    self:SaveResult(self:MakeUnavailableResult(entry, "timeout", L.NO_RESPONSE))
     self.current = nil
     self.inspectStartedAt = nil
     self.inspectDeadline = nil
@@ -614,9 +619,9 @@ function REA:FinishScan()
         self:UpdateProgress()
     end
     if retryName then
-        Chat("повторная проверка " .. retryName .. " завершена.")
+        Chat(string.format(L.RETRY_FINISHED_FMT, retryName))
     else
-        Chat("проверка завершена. Осмотрено строк: " .. tostring(#self.results) .. ". Для экспорта: /enchinsp export")
+        Chat(string.format(L.SCAN_FINISHED_FMT, #self.results))
     end
 end
 
@@ -635,7 +640,7 @@ function REA:CancelScan(silent)
         self:UpdateProgress()
     end
     if not silent then
-        Chat("проверка остановлена.")
+        Chat(L.SCAN_STOPPED)
     end
 end
 
@@ -721,24 +726,24 @@ end
 
 function REA:RetryResult(result)
     if self.scanning then
-        Chat("дождитесь окончания текущей проверки.")
+        Chat(L.WAIT_CURRENT_SCAN)
         return
     end
     if not result then
         return
     end
     if GetNumRaidMembers() <= 0 and GetNumPartyMembers() <= 0 then
-        Chat("повторная проверка работает только в рейде или группе.")
+        Chat(L.RETRY_GROUP_ONLY)
         return
     end
     if UnitAffectingCombat("player") then
-        Chat("повторите проверку после выхода из боя.")
+        Chat(L.RETRY_AFTER_COMBAT)
         return
     end
 
     local entry, groupType = self:FindGroupEntryForResult(result)
     if not entry then
-        Chat("персонаж " .. tostring(result.name or "?") .. " больше не найден в текущей группе.")
+        Chat(string.format(L.PLAYER_NOT_FOUND_FMT, tostring(result.name or "?")))
         return
     end
 
@@ -758,18 +763,18 @@ function REA:RetryResult(result)
     if self.RefreshUI then
         self:RefreshUI()
     end
-    Chat("повторная проверка: " .. entry.name .. ".")
+    Chat(string.format(L.RETRY_STARTED_FMT, entry.name))
     self:SetAction(0.05, "ProcessNext")
 end
 
 function REA:StartScan()
     local groupRoster, groupType = self:GetGroupRoster()
     if not groupType or #groupRoster <= 0 then
-        Chat("команда работает только в рейде или группе.")
+        Chat(L.GROUP_ONLY)
         return
     end
     if UnitAffectingCombat("player") then
-        Chat("начните проверку после выхода из боя.")
+        Chat(L.START_AFTER_COMBAT)
         return
     end
 
@@ -793,8 +798,8 @@ function REA:StartScan()
     if self.RefreshUI then
         self:RefreshUI()
     end
-    local groupLabel = groupType == "raid" and "рейда" or "группы"
-    Chat("начата ручная проверка " .. groupLabel .. ". Участников: " .. tostring(#self.queue) .. ".")
+    local groupLabel = groupType == "raid" and L.GROUP_RAID or L.GROUP_PARTY
+    Chat(string.format(L.SCAN_STARTED_FMT, groupLabel, #self.queue))
     self:SetAction(0.05, "ProcessNext")
 end
 
@@ -829,7 +834,7 @@ function REA:OnEvent(event, ...)
     elseif event == "PLAYER_REGEN_DISABLED" then
         if self.scanning then
             self:CancelScan(true)
-            Chat("осмотр прерван началом боя.")
+            Chat(L.COMBAT_INTERRUPTED)
         end
     end
 end
@@ -859,7 +864,7 @@ function REA:HandleRuntimeError(errorText)
     if self.UpdateProgress then
         pcall(self.UpdateProgress, self)
     end
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff3333AntiInspector ошибка:|r " .. tostring(errorText))
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff3333" .. L.ERROR_PREFIX .. "|r " .. tostring(errorText))
 end
 
 REA.ScanFrame:SetScript("OnEvent", function(_, event, ...)
@@ -895,9 +900,9 @@ SlashCmdList.ANTIINSPECTOR = function(message)
             REA.results = {}
             AntiInspectorDB.lastScan = nil
             REA:RefreshUI()
-            Chat("сохранённая таблица очищена.")
+            Chat(L.TABLE_CLEARED)
         end
     else
-        Chat("команды: /enchinsp, /enchinsp scan, /enchinsp show, /enchinsp stop, /enchinsp export, /enchinsp clear")
+        Chat(L.COMMANDS)
     end
 end

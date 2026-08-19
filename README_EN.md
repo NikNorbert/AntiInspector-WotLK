@@ -13,6 +13,7 @@ It scans nearby group members through the standard WoW Inspect API and displays 
 - Scans the player immediately and inspects nearby group members one at a time.
 - Shows character name, class, active talent tree, and talent point distribution.
 - Separate **Enchants** and **Gems** tabs.
+- Automatically follows the game client locale: `ruRU` uses a fully Russian interface, while English clients use an English interface.
 - Detects missing enchants on normally enchantable equipment slots.
 - Detects gem socket counts, installed gems, and empty sockets.
 - Recognizes additional sockets from Eternal Belt Buckle and profession bonuses.
@@ -99,6 +100,8 @@ The Enchants tab checks the equipment slots that normally support permanent ench
 Neck, shirt, rings, trinkets, and tabard are excluded from the enchant report. If Main Hand contains a two-handed weapon, the empty Off Hand slot is shown as unavailable instead of being reported as missing an enchant.
 
 ## Gem audit
+
+On a Russian client, the table displays localized Russian gem names returned by the game API. The TSV export still uses the addon's English effect database, so all exported headings and values remain English and Excel-safe.
 
 The Gems tab checks every equipment category that can contain sockets in WotLK:
 
