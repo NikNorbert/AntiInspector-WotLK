@@ -16,4 +16,4 @@ From Guild "CEKTA" with <3
 
 ### Excel export
 
-![AntiInspector Excel export](Screenshots/3_srn.png)
+![AntiInspector Excel export](Screenshots/3_srn.jpg)
