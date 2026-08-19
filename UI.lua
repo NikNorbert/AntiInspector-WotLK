@@ -2,7 +2,16 @@ local REA = AntiInspector
 local L = REA.L
 
 REA.GEAR_COLUMNS_PER_PAGE = 5
-REA.ROW_HEIGHT = 25
+REA.ROW_HEIGHT = 36
+
+-- Keep the path extensionless for maximum compatibility with the legacy 3.3.5a
+-- texture loader.  The unique basename also prevents an older rejected texture
+-- from being reused from the client's cache after an addon update.
+local BACKGROUND_TEXTURE = "Interface\\AddOns\\AntiInspector\\Textures\\MoonkinBackground"
+local BACKGROUND_TEXTURE_VISIBLE_HEIGHT = 281 / 512
+local TABLE_FONT_MIN = 8
+local TABLE_FONT_MAX = 11
+local TABLE_FONT_DEFAULT = 9
 
 local CELL_COLORS = {
     enchanted = { 0.25, 1.00, 0.35 },
@@ -76,6 +85,27 @@ local function MissingGemText(text)
     return ColoredText(text, "ff3b30")
 end
 
+local function LocalizedGemEffect(gem)
+    if not gem then
+        return nil
+    end
+    if gem.localizedEffect and gem.localizedEffect ~= "" then
+        return gem.localizedEffect
+    end
+    if gem.itemLink and REA.GetLocalizedGemEffect then
+        local localizedEffect = REA:GetLocalizedGemEffect(gem.itemLink)
+        if localizedEffect and localizedEffect ~= "" then
+            gem.localizedEffect = localizedEffect
+            gem.displayText = localizedEffect
+            return localizedEffect
+        end
+    end
+    if gem.effect and gem.effect ~= "" then
+        return gem.effect
+    end
+    return string.format(L.UNKNOWN_GEM_EFFECT_FMT, tostring(gem.enchantID or "?"))
+end
+
 local STATUS_COLORS = {
     ok = { 0.25, 1.00, 0.35 },
     partial = { 1.00, 0.75, 0.20 },
@@ -115,21 +145,30 @@ local function LocalizedGemDisplay(item)
     end
 
     local values = {}
+    local groups = {}
+    local groupOrder = {}
     local index
     for index = 1, 4 do
         local gem = item.gems and item.gems[index]
         if gem then
-            local linkName = gem.itemLink and string.match(gem.itemLink, "%[(.-)%]")
-            local displayText = gem.name or linkName or gem.displayText
-            if not displayText or displayText == "" then
-                if REA.isRussian then
-                    displayText = string.format(L.UNKNOWN_GEM_EFFECT_FMT, tostring(gem.enchantID or "?"))
-                else
-                    displayText = gem.effect or string.format(L.UNKNOWN_GEM_EFFECT_FMT, tostring(gem.enchantID or "?"))
-                end
+            local displayText = LocalizedGemEffect(gem)
+            local quality = GetGemQuality(gem) or -1
+            local groupKey = tostring(quality) .. "\031" .. tostring(displayText)
+            local group = groups[groupKey]
+            if group then
+                group.count = group.count + 1
+            else
+                group = { text = displayText, gem = gem, count = 1 }
+                groups[groupKey] = group
+                table.insert(groupOrder, group)
             end
-            table.insert(values, ColoredGemText(displayText, gem))
         end
+    end
+
+    for index = 1, #groupOrder do
+        local group = groupOrder[index]
+        local suffix = group.count > 1 and (" x" .. tostring(group.count)) or ""
+        table.insert(values, ColoredGemText(group.text .. suffix, group.gem))
     end
 
     local emptyCount = tonumber(item.gemEmptyCount) or 0
@@ -143,7 +182,7 @@ local function LocalizedGemDisplay(item)
         end
         return "—"
     end
-    return table.concat(values, "; ")
+    return table.concat(values, "\n")
 end
 
 local function MakeText(parent, font, justify)
@@ -167,6 +206,33 @@ local function SetCellText(cell, text, color)
         cell.text:SetTextColor(color[1], color[2], color[3])
     else
         cell.text:SetTextColor(0.85, 0.85, 0.85)
+    end
+end
+
+local function SetGearCellFont(cell, fontSize)
+    if not cell or not cell.text then
+        return
+    end
+    local fontPath = STANDARD_TEXT_FONT
+    if not fontPath and GameFontHighlightSmall and GameFontHighlightSmall.GetFont then
+        fontPath = select(1, GameFontHighlightSmall:GetFont())
+    end
+    if fontPath then
+        cell.text:SetFont(fontPath, fontSize, "OUTLINE")
+    end
+    if cell.text.SetWordWrap then
+        cell.text:SetWordWrap(true)
+    end
+end
+
+function REA:ApplyGearCellFonts()
+    local fontSize = self.tableFontSize or TABLE_FONT_DEFAULT
+    local rowIndex, column
+    for rowIndex = 1, #(self.Rows or {}) do
+        local row = self.Rows[rowIndex]
+        for column = 1, #(row.gearCells or {}) do
+            SetGearCellFont(row.gearCells[column], fontSize)
+        end
     end
 end
 
@@ -201,6 +267,8 @@ function REA:SetActiveTab(tabName)
             self.LegendText:SetText(L.LEGEND_ENCHANTS)
         end
     end
+
+    self:ApplyGearCellFonts()
 
     if self.RefreshUI then
         self:RefreshUI()
@@ -272,6 +340,7 @@ function REA:CreateRow(index)
         cell:SetPoint("LEFT", row, "LEFT", 462 + ((column - 1) * 120), 0)
         cell.text = MakeText(cell, "GameFontHighlightSmall", "CENTER")
         cell.text:SetAllPoints(cell)
+        SetGearCellFont(cell, self.tableFontSize or TABLE_FONT_DEFAULT)
         cell:SetScript("OnEnter", function(button)
             if not button.itemData then
                 return
@@ -289,8 +358,9 @@ function REA:CreateRow(index)
                     if gem then
                         local gemLabel = gem.itemLink or gem.name or gem.displayText or gem.effect or L.UNKNOWN_GEM
                         GameTooltip:AddLine(string.format(L.GEM_FMT, index, gemLabel), 0.25, 1, 0.35, true)
-                        if not REA.isRussian and gem.effect and gem.effect ~= gem.name then
-                            GameTooltip:AddLine("  " .. gem.effect, 0.70, 0.85, 1, true)
+                        local localizedEffect = LocalizedGemEffect(gem)
+                        if localizedEffect and localizedEffect ~= gem.name then
+                            GameTooltip:AddLine("  " .. localizedEffect, 0.70, 0.85, 1, true)
                         end
                     end
                 end
@@ -651,6 +721,37 @@ function REA:ShowWindow()
     end
 end
 
+function REA:SetBackgroundOpacity(percent, saveValue)
+    percent = tonumber(percent) or 100
+    percent = math.max(0, math.min(100, percent))
+    percent = math.floor(percent + 0.5)
+
+    if self.BackgroundTexture then
+        self.BackgroundTexture:SetAlpha(percent / 100)
+    end
+    if self.BackgroundOpacityLabel then
+        self.BackgroundOpacityLabel:SetText(string.format(L.BACKGROUND_OPACITY_FMT, percent))
+    end
+    if saveValue and AntiInspectorDB then
+        AntiInspectorDB.backgroundOpacity = percent
+    end
+end
+
+function REA:SetTableFontSize(fontSize, saveValue)
+    fontSize = tonumber(fontSize) or TABLE_FONT_DEFAULT
+    fontSize = math.max(TABLE_FONT_MIN, math.min(TABLE_FONT_MAX, fontSize))
+    fontSize = math.floor(fontSize + 0.5)
+    self.tableFontSize = fontSize
+
+    if self.TableFontLabel then
+        self.TableFontLabel:SetText(string.format(L.TABLE_FONT_FMT, fontSize))
+    end
+    if saveValue and AntiInspectorDB then
+        AntiInspectorDB.tableFontSize = fontSize
+    end
+    self:ApplyGearCellFonts()
+end
+
 local MINIMAP_BUTTON_RADIUS = 80
 
 local function PositionMinimapButton(button, angle)
@@ -773,16 +874,19 @@ function REA:InitializeUI()
     frame:SetScript("OnDragStop", function(window) window:StopMovingOrSizing() end)
     frame:SetClampedToScreen(true)
     frame:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true,
-        tileSize = 32,
         edgeSize = 32,
         insets = { left = 11, right = 12, top = 12, bottom = 11 },
     })
     frame:Hide()
     self.MainFrame = frame
     table.insert(UISpecialFrames, "AntiInspectorFrame")
+
+    local windowBackground = frame:CreateTexture(nil, "BACKGROUND")
+    windowBackground:SetTexture(BACKGROUND_TEXTURE)
+    windowBackground:SetAllPoints(frame)
+    windowBackground:SetTexCoord(0, 1, 0, BACKGROUND_TEXTURE_VISIBLE_HEIGHT)
+    self.BackgroundTexture = windowBackground
 
     local title = MakeText(frame, "GameFontNormalLarge", "CENTER")
     title:SetPoint("TOP", frame, "TOP", 0, -17)
@@ -879,11 +983,88 @@ function REA:InitializeUI()
     self.TableChild = child
 
     self.LegendText = MakeText(frame, "GameFontHighlightSmall")
-    self.LegendText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 23)
+    self.LegendText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 43)
 
     local hint = MakeText(frame, "GameFontDisableSmall", "RIGHT")
-    hint:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 23)
+    hint:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 43)
+    hint:SetWidth(320)
     hint:SetText(L.RETRY_HINT)
+
+    local fontSlider = CreateFrame("Slider", "AntiInspectorTableFontSlider", frame, "OptionsSliderTemplate")
+    fontSlider:SetWidth(100)
+    fontSlider:SetHeight(16)
+    fontSlider:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 154, 19)
+    fontSlider:SetMinMaxValues(TABLE_FONT_MIN, TABLE_FONT_MAX)
+    fontSlider:SetValueStep(1)
+    local fontLowText = _G[fontSlider:GetName() .. "Low"]
+    local fontHighText = _G[fontSlider:GetName() .. "High"]
+    local fontNameText = _G[fontSlider:GetName() .. "Text"]
+    if fontLowText then fontLowText:SetText("") end
+    if fontHighText then fontHighText:SetText("") end
+    if fontNameText then fontNameText:SetText("") end
+
+    local fontLabel = MakeText(frame, "GameFontHighlightSmall", "RIGHT")
+    fontLabel:SetPoint("RIGHT", fontSlider, "LEFT", -8, 0)
+    fontLabel:SetWidth(125)
+    self.TableFontLabel = fontLabel
+    self.TableFontSlider = fontSlider
+
+    fontSlider:SetScript("OnValueChanged", function(_, value)
+        REA:SetTableFontSize(value, true)
+    end)
+    fontSlider:SetScript("OnEnter", function(slider)
+        GameTooltip:SetOwner(slider, "ANCHOR_TOP")
+        GameTooltip:SetText(string.format(L.TABLE_FONT_FMT, math.floor((slider:GetValue() or TABLE_FONT_DEFAULT) + 0.5)), 1, 0.82, 0)
+        GameTooltip:AddLine(L.TABLE_FONT_TOOLTIP, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    fontSlider:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    local savedFontSize = AntiInspectorDB and tonumber(AntiInspectorDB.tableFontSize)
+        or (AntiInspectorDB and tonumber(AntiInspectorDB.gemFontSize))
+        or TABLE_FONT_DEFAULT
+    savedFontSize = math.max(TABLE_FONT_MIN, math.min(TABLE_FONT_MAX, savedFontSize))
+    fontSlider:SetValue(savedFontSize)
+    self:SetTableFontSize(savedFontSize, false)
+
+    local opacitySlider = CreateFrame("Slider", "AntiInspectorBackgroundOpacitySlider", frame, "OptionsSliderTemplate")
+    opacitySlider:SetWidth(150)
+    opacitySlider:SetHeight(16)
+    opacitySlider:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -24, 19)
+    opacitySlider:SetMinMaxValues(0, 100)
+    opacitySlider:SetValueStep(5)
+    local lowText = _G[opacitySlider:GetName() .. "Low"]
+    local highText = _G[opacitySlider:GetName() .. "High"]
+    local nameText = _G[opacitySlider:GetName() .. "Text"]
+    if lowText then lowText:SetText("") end
+    if highText then highText:SetText("") end
+    if nameText then nameText:SetText("") end
+
+    local opacityLabel = MakeText(frame, "GameFontHighlightSmall", "RIGHT")
+    opacityLabel:SetPoint("RIGHT", opacitySlider, "LEFT", -8, 0)
+    opacityLabel:SetWidth(115)
+    self.BackgroundOpacityLabel = opacityLabel
+    self.BackgroundOpacitySlider = opacitySlider
+
+    opacitySlider:SetScript("OnValueChanged", function(_, value)
+        REA:SetBackgroundOpacity(value, true)
+    end)
+    opacitySlider:SetScript("OnEnter", function(slider)
+        GameTooltip:SetOwner(slider, "ANCHOR_TOP")
+        GameTooltip:SetText(string.format(L.BACKGROUND_OPACITY_FMT, math.floor((slider:GetValue() or 0) + 0.5)), 1, 0.82, 0)
+        GameTooltip:AddLine(L.BACKGROUND_OPACITY_TOOLTIP, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    opacitySlider:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    local savedOpacity = AntiInspectorDB and tonumber(AntiInspectorDB.backgroundOpacity) or 100
+    savedOpacity = math.max(0, math.min(100, savedOpacity))
+    opacitySlider:SetValue(savedOpacity)
+    self:SetBackgroundOpacity(savedOpacity, false)
 
     local export = CreateFrame("Frame", "AntiInspectorExportFrame", UIParent)
     export:SetWidth(800)

@@ -16,11 +16,14 @@ It scans nearby group members through the standard WoW Inspect API and displays 
 - Automatically follows the game client locale: `ruRU` uses a fully Russian interface, while English clients use an English interface.
 - Detects missing enchants on normally enchantable equipment slots.
 - Detects gem socket counts, installed gems, and empty sockets.
-- Colors gem names by item quality in the Gems table: bright purple for Epic, blue for Rare, green for Uncommon, and red for empty sockets.
+- Shows localized gem stat effects instead of gem item names and colors them by quality: bright purple for Epic, blue for Rare, green for Uncommon, and red for empty sockets.
+- Provides a saved 8–11 point equipment-cell font slider that applies to both Enchants and Gems; gem effects use separate lines and duplicate-effect grouping such as `+20 Strength x3`.
 - Recognizes additional sockets from Eternal Belt Buckle and profession bonuses.
 - Allows any character to be rescanned by clicking their name after the group scan has finished, including characters whose first scan succeeded.
 - Correctly treats an empty Off Hand as unavailable when a two-handed weapon is equipped in Main Hand.
 - Draggable minimap button for opening and closing the addon window.
+- Opaque moonlit moonkin artwork for the main window, with a saved 0–100% background-opacity slider.
+- Uses a legacy-compatible uncompressed 32-bit 512x512 TGA loaded through a cache-safe texture path.
 - Saves the most recent scan between `/reload` and game sessions.
 - Excel-compatible TSV export with English class, build, status, enchant, and gem text.
 - Includes 2,655 named enchant and gem-effect entries from the WoW 3.3.5a `SpellItemEnchantment.dbc` data.
@@ -40,7 +43,10 @@ It scans nearby group members through the standard WoW Inspect API and displays 
    World of Warcraft\Interface\AddOns\AntiInspector\AntiInspector.toc
    ```
 
-3. Restart the game or run:
+3. Fully close and restart the game. A `/reload` may not discover a newly added
+   texture file because the legacy client can cache rejected textures.
+
+   For later Lua-only updates, you can run:
 
    ```text
    /reload
@@ -178,4 +184,4 @@ The helper does not read game memory or modify the WoW client. It only processes
 
 - World of Warcraft 3.3.5a
 - Interface number: `30300`
-- Addon version: `2.0.6`
+- Addon version: `2.0.7`

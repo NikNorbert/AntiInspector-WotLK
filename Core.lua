@@ -2,7 +2,7 @@ AntiInspector = AntiInspector or {}
 local REA = AntiInspector
 local L = REA.L
 
-REA.VERSION = "2.0.6"
+REA.VERSION = "2.0.7"
 REA.INSPECT_TIMEOUT = 4.0
 REA.INSPECT_DELAY = 1.0
 REA.INSPECT_POLL_DELAY = 0.25
@@ -154,6 +154,26 @@ local function FindLocalizedEnchantText(itemLink, enchantID)
     return REA.EnchantFallbacks[enchantID]
 end
 
+local function FindLocalizedGemEffect(gemLink)
+    if not gemLink or not REA.GemTooltip then
+        return nil
+    end
+
+    local lines = TooltipLines(REA.GemTooltip, gemLink)
+    local i
+    for i = 1, #lines do
+        local text = string.match(lines[i].text or "", "^%s*(.-)%s*$")
+        if text and string.sub(text, 1, 1) == "+" then
+            return string.gsub(text, "[\r\n]+", " ")
+        end
+    end
+    return nil
+end
+
+function REA:GetLocalizedGemEffect(gemLink)
+    return FindLocalizedGemEffect(gemLink)
+end
+
 local function ParseItemLink(itemLink)
     if not itemLink then
         return nil, nil, { 0, 0, 0, 0 }
@@ -246,9 +266,8 @@ local function FillGemData(item)
             local effect = REA.EnchantFallbacks[gemEnchantID]
                 or ("Unknown gem effect ID " .. tostring(gemEnchantID))
             local gemQuality = gemLink and select(3, GetItemInfo(gemLink)) or nil
-            local displayText = gemName
-                or (REA.isRussian and string.format(L.UNKNOWN_GEM_EFFECT_FMT, tostring(gemEnchantID)))
-                or effect
+            local localizedEffect = FindLocalizedGemEffect(gemLink)
+            local displayText = localizedEffect or effect
             item.gems[index] = {
                 index = index,
                 enchantID = gemEnchantID,
@@ -256,6 +275,7 @@ local function FillGemData(item)
                 itemLink = gemLink,
                 quality = tonumber(gemQuality),
                 effect = effect,
+                localizedEffect = localizedEffect,
                 displayText = displayText,
             }
             filledCount = filledCount + 1
@@ -825,6 +845,7 @@ function REA:OnEvent(event, ...)
         self:LoadSavedScan()
         self.ActualTooltip = CreateFrame("GameTooltip", "AntiInspectorActualTooltip", UIParent, "GameTooltipTemplate")
         self.PlainTooltip = CreateFrame("GameTooltip", "AntiInspectorPlainTooltip", UIParent, "GameTooltipTemplate")
+        self.GemTooltip = CreateFrame("GameTooltip", "AntiInspectorGemTooltip", UIParent, "GameTooltipTemplate")
         if self.InitializeUI then
             self:InitializeUI()
         end
