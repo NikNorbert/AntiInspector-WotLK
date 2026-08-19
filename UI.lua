@@ -587,6 +587,12 @@ local function EnglishBuild(result)
 end
 
 local function EnglishEnchant(item)
+    -- Only a successfully inspected, equipped item that is known to require an
+    -- enchant is exported as NONE. Unknown/unavailable cells stay blank so a
+    -- failed scan cannot be mistaken for a missing enchant.
+    if item and item.state == "missing" then
+        return "NONE"
+    end
     local enchantID = item and tonumber(item.enchantID)
     if not enchantID or enchantID == 0 then
         return ""
@@ -656,9 +662,13 @@ function REA:BuildEnchantExportText()
     for rowIndex = 1, #(self.results or {}) do
         local result = self.results[rowIndex]
         local values = CharacterExportValues(result)
+        local gearWasScanned = result.status == "ok" or result.status == "partial"
         for i = 1, #self.Slots do
             local slot = self.Slots[i]
-            local item = result.gear and result.gear[slot.key]
+            local item
+            if gearWasScanned and result.gear then
+                item = result.gear[slot.key]
+            end
             table.insert(values, QuoteTSV(EnglishEnchant(item)))
         end
         table.insert(lines, table.concat(values, "\t"))

@@ -39,6 +39,8 @@ This release introduces a new moonkin-themed window background and makes gem inf
 - Russian clients display both settings and their tooltips in Russian.
 - English clients display both settings and their tooltips in English.
 - TSV and Excel exports remain fully English and contain no UI color codes.
+- Enchant export now writes `NONE` for a confirmed missing enchant.
+- Equipment cells remain blank when a character could not be inspected, so scan failures are not reported as missing enchants.
 
 ## Compatibility
 

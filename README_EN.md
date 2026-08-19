@@ -26,6 +26,7 @@ It scans nearby group members through the standard WoW Inspect API and displays 
 - Uses a legacy-compatible uncompressed 32-bit 512x512 TGA loaded through a cache-safe texture path.
 - Saves the most recent scan between `/reload` and game sessions.
 - Excel-compatible TSV export with English class, build, status, enchant, and gem text.
+- Enchant export writes `NONE` only for a confirmed missing enchant; equipment cells remain blank when a character could not be inspected.
 - Includes 2,655 named enchant and gem-effect entries from the WoW 3.3.5a `SpellItemEnchantment.dbc` data.
 - Optional Windows helper for creating timestamped `.tsv` and `.xlsx` files while the game is running.
 
