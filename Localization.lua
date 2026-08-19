@@ -38,7 +38,7 @@ local EN = {
     UNKNOWN_GEM = "Unknown gem",
     UNKNOWN_GEM_EFFECT_FMT = "Unknown gem effect ID %s",
     UNKNOWN_ENCHANT_FMT = "Unknown enchant ID %s",
-    LEGEND_GEMS = "|cff40ff59Gems socketed|r   |cffff4033EMPTY SOCKET|r   |cffffb733partially filled|r   |cff8c8c8c— no sockets|r",
+    LEGEND_GEMS = "|cffc966ffEpic|r   |cff4a8dffRare|r   |cff40ff59Uncommon|r   |cffff3b30EMPTY SOCKET|r   |cff8c8c8c— no sockets|r",
     LEGEND_ENCHANTS = "|cff40ff59Enchant found|r   |cffff4033NO ENCHANT|r — slot normally requires an enchant   |cff8c8c8c— slot is not normally enchanted|r",
     STATUS_FMT = "Status: %s",
     RETRY_TOOLTIP = "Click to scan this character again.",
@@ -121,7 +121,7 @@ local RU = {
     UNKNOWN_GEM = "Неизвестный камень",
     UNKNOWN_GEM_EFFECT_FMT = "Неизвестный эффект камня ID %s",
     UNKNOWN_ENCHANT_FMT = "Неизвестные чары ID %s",
-    LEGEND_GEMS = "|cff40ff59Камни установлены|r   |cffff4033ПУСТОЙ СОКЕТ|r   |cffffb733частично заполнено|r   |cff8c8c8c— сокетов нет|r",
+    LEGEND_GEMS = "|cffc966ffПревосходный|r   |cff4a8dffРедкий|r   |cff40ff59Необычный|r   |cffff3b30ПУСТОЙ СОКЕТ|r   |cff8c8c8c— сокетов нет|r",
     LEGEND_ENCHANTS = "|cff40ff59Чары найдены|r   |cffff4033НЕТ ЧАР|r — слот обычно требует чар   |cff8c8c8c— слот обычно не чарится|r",
     STATUS_FMT = "Статус: %s",
     RETRY_TOOLTIP = "Нажмите, чтобы проверить этого персонажа ещё раз.",
@@ -171,4 +171,3 @@ local RU = {
 }
 
 REA.L = REA.isRussian and RU or EN
-

@@ -23,6 +23,59 @@ local GEM_CELL_COLORS = {
     unavailable = { 0.45, 0.45, 0.45 },
 }
 
+local GEM_QUALITY_HEX = {
+    [0] = "9d9d9d",
+    [1] = "ffffff",
+    [2] = "40ff59",
+    [3] = "4a8dff",
+    [4] = "c966ff",
+    [5] = "ff8000",
+}
+
+local GEM_LINK_QUALITY = {
+    ["9d9d9d"] = 0,
+    ["ffffff"] = 1,
+    ["1eff00"] = 2,
+    ["0070dd"] = 3,
+    ["a335ee"] = 4,
+    ["ff8000"] = 5,
+}
+
+local function ColoredText(text, hex)
+    return "|cff" .. (hex or "ffffff") .. tostring(text or "") .. "|r"
+end
+
+local function GetGemQuality(gem)
+    if not gem then
+        return nil
+    end
+    local quality = tonumber(gem.quality)
+    if quality then
+        return quality
+    end
+    if gem.itemLink and GetItemInfo then
+        quality = tonumber(select(3, GetItemInfo(gem.itemLink)))
+        if quality then
+            gem.quality = quality
+            return quality
+        end
+    end
+    local linkColor = gem.itemLink and string.match(gem.itemLink, "|cff(%x%x%x%x%x%x)")
+    if linkColor then
+        linkColor = string.lower(linkColor)
+    end
+    return linkColor and GEM_LINK_QUALITY[linkColor] or nil
+end
+
+local function ColoredGemText(text, gem)
+    local quality = GetGemQuality(gem)
+    return ColoredText(text, GEM_QUALITY_HEX[quality] or "ffffff")
+end
+
+local function MissingGemText(text)
+    return ColoredText(text, "ff3b30")
+end
+
 local STATUS_COLORS = {
     ok = { 0.25, 1.00, 0.35 },
     partial = { 1.00, 0.75, 0.20 },
@@ -58,7 +111,7 @@ local function LocalizedGemDisplay(item)
         return L.NO_DATA
     end
     if item.gemState == "empty" then
-        return L.EMPTY
+        return MissingGemText(L.EMPTY)
     end
 
     local values = {}
@@ -75,18 +128,18 @@ local function LocalizedGemDisplay(item)
                     displayText = gem.effect or string.format(L.UNKNOWN_GEM_EFFECT_FMT, tostring(gem.enchantID or "?"))
                 end
             end
-            table.insert(values, displayText)
+            table.insert(values, ColoredGemText(displayText, gem))
         end
     end
 
     local emptyCount = tonumber(item.gemEmptyCount) or 0
     if emptyCount > 0 then
-        table.insert(values, L.EMPTY .. " x" .. tostring(emptyCount))
+        table.insert(values, MissingGemText(L.EMPTY .. " x" .. tostring(emptyCount)))
     end
     if #values <= 0 then
         local socketCount = tonumber(item.gemSocketCount) or 0
         if socketCount > 0 then
-            return L.EMPTY .. " x" .. tostring(socketCount)
+            return MissingGemText(L.EMPTY .. " x" .. tostring(socketCount))
         end
         return "—"
     end

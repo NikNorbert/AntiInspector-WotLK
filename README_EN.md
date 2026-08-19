@@ -16,6 +16,7 @@ It scans nearby group members through the standard WoW Inspect API and displays 
 - Automatically follows the game client locale: `ruRU` uses a fully Russian interface, while English clients use an English interface.
 - Detects missing enchants on normally enchantable equipment slots.
 - Detects gem socket counts, installed gems, and empty sockets.
+- Colors gem names by item quality in the Gems table: bright purple for Epic, blue for Rare, green for Uncommon, and red for empty sockets.
 - Recognizes additional sockets from Eternal Belt Buckle and profession bonuses.
 - Allows any character to be rescanned by clicking their name after the group scan has finished, including characters whose first scan succeeded.
 - Correctly treats an empty Off Hand as unavailable when a two-handed weapon is equipped in Main Hand.
@@ -177,4 +178,4 @@ The helper does not read game memory or modify the WoW client. It only processes
 
 - World of Warcraft 3.3.5a
 - Interface number: `30300`
-- Addon version: `2.0.5`
+- Addon version: `2.0.6`

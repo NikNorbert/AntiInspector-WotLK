@@ -2,7 +2,7 @@ AntiInspector = AntiInspector or {}
 local REA = AntiInspector
 local L = REA.L
 
-REA.VERSION = "2.0.5"
+REA.VERSION = "2.0.6"
 REA.INSPECT_TIMEOUT = 4.0
 REA.INSPECT_DELAY = 1.0
 REA.INSPECT_POLL_DELAY = 0.25
@@ -245,6 +245,7 @@ local function FillGemData(item)
             end
             local effect = REA.EnchantFallbacks[gemEnchantID]
                 or ("Unknown gem effect ID " .. tostring(gemEnchantID))
+            local gemQuality = gemLink and select(3, GetItemInfo(gemLink)) or nil
             local displayText = gemName
                 or (REA.isRussian and string.format(L.UNKNOWN_GEM_EFFECT_FMT, tostring(gemEnchantID)))
                 or effect
@@ -253,6 +254,7 @@ local function FillGemData(item)
                 enchantID = gemEnchantID,
                 name = gemName,
                 itemLink = gemLink,
+                quality = tonumber(gemQuality),
                 effect = effect,
                 displayText = displayText,
             }
