@@ -1,10 +1,31 @@
+<div align="center">
+
 # AntiInspector
 
-[Русская версия](README_RU.md)
+**Manual enchant and gem auditing for parties and raids in World of Warcraft 3.3.5a**
 
-AntiInspector is a manual party and raid enchant and gem auditing addon for **World of Warcraft 3.3.5a (Wrath of the Lich King)**.
+Find missing enchants and empty sockets, rescan individual players,<br>
+and move the results into Excel — all from one window.
 
-It scans nearby group members through the standard WoW Inspect API and displays their character name, class, active talent build, equipment enchants, socket count, installed gems, and empty sockets. Results can be copied directly into Microsoft Excel as an English TSV table.
+<p>
+  <img src="https://img.shields.io/badge/WoW-3.3.5a%20WotLK-C79C6E?style=flat-square" alt="WoW 3.3.5a WotLK">
+  <img src="https://img.shields.io/badge/Interface-30300-4B69FF?style=flat-square" alt="Interface 30300">
+  <img src="https://img.shields.io/badge/Version-2.0.7-A335EE?style=flat-square" alt="Version 2.0.7">
+  <img src="https://img.shields.io/badge/UI-EN%20%2F%20RU-1EFF00?style=flat-square" alt="English and Russian UI">
+</p>
+
+<p>
+  <a href="https://github.com/NikNorbert/AntiInspector-WotLK/archive/refs/tags/v2.0.7.zip"><img src="https://img.shields.io/badge/DOWNLOAD-v2.0.7-A335EE?style=for-the-badge&amp;logo=github" alt="Download AntiInspector 2.0.7"></a>
+  <a href="RELEASE_NOTES_2.0.7_EN.md"><img src="https://img.shields.io/badge/RELEASE%20NOTES-2.0.7-C79C6E?style=for-the-badge&amp;logo=readme" alt="Read the AntiInspector 2.0.7 release notes"></a>
+</p>
+
+[Русская документация](README_RU.md)
+
+</div>
+
+![AntiInspector enchant audit](Screenshots/1_srn.jpg)
+
+AntiInspector scans nearby group members through the standard WoW Inspect API and displays their character name, class, active talent build, equipment enchants, socket count, installed gems, and empty sockets. Results can be copied directly into Microsoft Excel as an English TSV table.
 
 ## Features
 
